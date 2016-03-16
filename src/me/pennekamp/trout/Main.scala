@@ -24,7 +24,7 @@ object Main {
   }
 
   class GameInputListener extends InputListener {
-    override val keyDown: PartialFunction[Input.Key, Unit] = {
+    override val keyDown: Input.KeyHandler = {
       case GLFW_KEY_ESCAPE => application.requestClose()
     }
 
