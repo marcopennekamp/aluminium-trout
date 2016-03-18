@@ -1,8 +1,12 @@
 package me.pennekamp.trout
 
-import org.lwjgl.Version
+import java.nio.DoubleBuffer
+import java.lang.Math.floor
+
+import me.pennekamp.trout.input.{InputListener, Key, MousePress}
+import org.lwjgl.{BufferUtils, Version}
 import org.lwjgl.glfw.GLFW._
-import org.lwjgl.glfw.{GLFWErrorCallback, GLFWKeyCallback}
+import org.lwjgl.glfw.{GLFWErrorCallback, GLFWKeyCallback, GLFWMouseButtonCallback}
 import org.lwjgl.opengl.GL
 import org.lwjgl.opengl.GL11._
 import org.lwjgl.system.MemoryUtil._
@@ -19,9 +23,30 @@ object Application {
 
 class Application(private val config: Application.Config) {
 
-  // We need to strongly reference callback instances.
-  private var errorCallback: GLFWErrorCallback = null
-  private var keyCallback: GLFWKeyCallback = null
+  // We need to strongly reference callback instances, so don't make them local variables.
+  private val errorCallback: GLFWErrorCallback = GLFWErrorCallback.createPrint(System.err)
+
+  private val keyCallback: GLFWKeyCallback = GLFWKeyCallback.create {
+    (window: Long, key: Key, scancode: Int, action: Int, mods: Int) =>
+      action match {
+        case GLFW_PRESS => config.inputListener.keyDown.applyOrElse(key, handleUnboundKey("pressed"))
+        case GLFW_RELEASE => config.inputListener.keyUp.applyOrElse(key, handleUnboundKey("released"))
+        case _ =>
+      }
+  }
+
+  private val mouseButtonCallback: GLFWMouseButtonCallback = GLFWMouseButtonCallback.create {
+    (window: Long, button: Int, action: Int, mods: Int) =>
+      action match {
+        case GLFW_PRESS => config.inputListener.mouseDown.applyOrElse(
+          MousePress(mousePosition, button), handleUnregisteredMousePress("press")
+        )
+        case GLFW_RELEASE => config.inputListener.mouseDown.applyOrElse(
+          MousePress(mousePosition, button), handleUnregisteredMousePress("release")
+        )
+        case _ =>
+      }
+  }
 
   // The window handle
   private var windowHandle: Long = 0
@@ -35,21 +60,36 @@ class Application(private val config: Application.Config) {
 
       // Destroy window and window callbacks
       glfwDestroyWindow(windowHandle)
-      keyCallback.free()
+      //keyCallback.free()
+      //mouseButtonCallback.free()
     } finally {
       // Terminate GLFW and free the GLFWErrorCallback
       glfwTerminate()
-      errorCallback.free()
+      //errorCallback.free()
     }
   }
 
-  private def handleUnboundKey(actionName: String)(key: Input.Key): Unit = {
+  // Buffers for getting the mouse position.
+  private val bufferMpX: DoubleBuffer = BufferUtils.createDoubleBuffer(1)
+  private val bufferMpY: DoubleBuffer = BufferUtils.createDoubleBuffer(1)
+
+  def mousePosition: ScreenPosition = {
+    bufferMpX.rewind()
+    bufferMpY.rewind()
+    glfwGetCursorPos(windowHandle, bufferMpX, bufferMpY)
+    ScreenPosition(floor(bufferMpX.get()).toInt, floor(bufferMpY.get()).toInt)
+  }
+
+  private def handleUnboundKey(actionName: String)(key: Key): Unit = {
     println(s"Unbound key $actionName: $key")
+  }
+
+  private def handleUnregisteredMousePress(actionName: String)(mousePress: MousePress): Unit = {
+    println(s"Unhandled mouse button $actionName: $mousePress")
   }
 
   private def init(): Unit = {
     // Setup an error callback.
-    errorCallback = GLFWErrorCallback.createPrint(System.err)
     glfwSetErrorCallback(errorCallback)
 
     // Initialize GLFW.
@@ -75,18 +115,9 @@ class Application(private val config: Application.Config) {
       throw new RuntimeException("Failed to create the GLFW window")
     }
 
-    keyCallback = new GLFWKeyCallback {
-      override def invoke(window: Long, key: Int, scancode: Int, action: Int, mods: Int): Unit = {
-        action match {
-          case GLFW_PRESS => config.inputListener.keyDown.applyOrElse(key, handleUnboundKey("pressed"))
-          case GLFW_RELEASE => config.inputListener.keyUp.applyOrElse(key, handleUnboundKey("released"))
-          case _ =>
-        }
-      }
-    }
-
-    // Setup a key callback. It will be called every time a key is pressed, repeated or released.
+    // Setup the callbacks.
     glfwSetKeyCallback(windowHandle, keyCallback)
+    glfwSetMouseButtonCallback(windowHandle, mouseButtonCallback)
 
     // Get the resolution of the primary monitor
     val vidmode = glfwGetVideoMode(glfwGetPrimaryMonitor())

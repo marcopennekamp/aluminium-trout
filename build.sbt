@@ -15,11 +15,13 @@ unmanagedSourceDirectories in Test := Seq(baseDirectory.value / "test")
 resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 libraryDependencies ++= Seq(
-  "org.lwjgl" % "lwjgl" % "3.0.0-SNAPSHOT",
-  "org.lwjgl" % "lwjgl-platform" % "3.0.0-SNAPSHOT" classifier "natives-windows",
-  "org.lwjgl" % "lwjgl-platform" % "3.0.0-SNAPSHOT" classifier "natives-linux",
-  "org.lwjgl" % "lwjgl-platform" % "3.0.0-SNAPSHOT" classifier "natives-osx"
+  "org.lwjgl" % "lwjgl" % "3.0.0b",
+  "org.lwjgl" % "lwjgl-platform" % "3.0.0b" classifier "natives-windows",
+  "org.lwjgl" % "lwjgl-platform" % "3.0.0b" classifier "natives-linux",
+  "org.lwjgl" % "lwjgl-platform" % "3.0.0b" classifier "natives-osx"
 )
+
+scalacOptions += "-Xexperimental"
 
 // Needed to copy the LWJGL native jars to an accessible folder.
 retrieveManaged := true

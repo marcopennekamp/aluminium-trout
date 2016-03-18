@@ -1,5 +1,6 @@
 package me.pennekamp.trout
 
+import me.pennekamp.trout.input.{Handler, InputListener, Key, MousePress}
 import org.lwjgl.opengl.GL11._
 import org.lwjgl.glfw.GLFW._
 
@@ -24,11 +25,13 @@ object Main {
   }
 
   class GameInputListener extends InputListener {
-    override val keyDown: Input.KeyHandler = {
+    override val keyDown: Handler[Key] = {
       case GLFW_KEY_ESCAPE => application.requestClose()
     }
 
     override val keyUp = PartialFunction.empty
+    override val mouseDown: Handler[MousePress] = PartialFunction.empty
+    override val mouseUp: Handler[MousePress] = PartialFunction.empty
   }
 
   def main(args: Array[String]) {
